@@ -57,13 +57,17 @@ or -1 if no such chart is found"
 (defun st-add-child (child))
 (defun st-remove-child (child))
 
-(defun st (title)
+(defun st ()
   "Choose a chart to open, or create a new chart."
-  (interactive "sChart Title: ")
-  (setq idx (st--get-index-by-title title))
-  (when (= idx -1)
-    (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
-  (st--by-index idx))
+  (interactive)
+  (let ((titles (mapcar* #'cons
+                         (mapcar (lambda (l) (plist-get l 'title)) st-charts)
+                         (number-sequence 0 (length st-charts)))))
+    (setq title (completing-read "Chart Title: " titles))
+    (setq idx (st--get-index-by-title title))
+    (when (= idx -1)
+      (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
+    (st--by-index idx)))
 
 (defun st--by-index (index)
   (let ((chart (nth index st-charts)))
