@@ -19,37 +19,56 @@ or -1 if no such chart is found"
   (if idx
       (cond
        ((not charts) -1)
-       ((string= (plist-get (car charts) 'title) title) idx)
-       (t (st--get-index-by-title title (+ idx 1) (cdr charts))))
+       ((string= (plist-get (gethash idx charts) 'title) title) idx)
+       (t (st--get-index-by-title title (incf idx) st-charts)))
     (st--get-index-by-title title 0 st-charts)))
 
 (defun st--child-chart-pp (idx)
-  (let* ((chart (nth idx st-charts))
-         (complete (if (plist-get chart 'complete) "X" " ")))
+  (let ((chart (gethash idx st-charts))
+        (complete (if (plist-get chart 'complete) "X" " ")))
     (concat "- " complete (plist-get chart 'title) "\n\n")))
 
-(defun st--render-chart ()
-  (insert "\nIdeal:\n"
-          (plist-get chart 'ideal)
-          "\n\n"
-          (apply
-           'concat
-           (mapcar
-            (lambda (i) (st--child-chart-pp i))
-            (plist-get chart 'children)))
-          "Real:\n"
-          (plist-get chart 'real)
+(defun st--insert-chart ()
+  (insert "\nIdeal:\n")
+  (setq ideal-start (point-marker))
+  (insert (plist-get chart 'ideal))
+  (setq ideal-end (point-marker))
 
-          (when (plist-get chart 'parents)
-            "\n\nRelated charts:\n"
-            (substring
-             (apply
-              'concat
-              (mapcar
-               (lambda (i)
-                 (concat (plist-get (nth i st-charts) 'title) ", "))
-               (plist-get chart 'parents)))
-             0 -2))))
+  (insert "\n\n")
+  (st--insert-children)
+
+  (insert "\nReal:\n")
+  (setq real-start (point-marker))
+  (insert (plist-get chart 'real))
+  (setq real-end (point-marker))
+
+  (when (plist-get chart 'parents)
+    "\n\nRelated charts:\n"
+    (st--insert-parents)))
+
+(defun st--insert-children ()
+  (let ((children (mapcar (lambda (i) (cons i (gethash i st-charts)))
+                          (plist-get chart 'children))))
+    (mapcar
+     (lambda (child)
+       (insert "- [" (if (plist-get (cdr child) 'complete) "X" " ") "] ")
+       (setq child-button-start (point))
+       (insert (plist-get (cdr child) 'title))
+       (make-button child-button-start (point)
+                    'action `(lambda (x) (st--by-index ,(car child))))
+       (insert "\n"))
+     children)))
+
+(defun st--insert-parents ()
+  (let ((parents (mapcar (lambda (i) (gethash i st-charts))
+                         (plist-get chart 'parents))))
+    (mapcar
+     (lambda (parent)
+       (insert (plist-get parent 'title) ", "))
+     parents)))
+
+(defun st-save-chart ()
+  (puthash index chart st-charts))
 
 (defun st-insert-chart-at-point ())
 (defun st-remove-chart-at-point ())
@@ -63,22 +82,25 @@ or -1 if no such chart is found"
 (defun st ()
   "Choose a chart to open, or create a new chart."
   (interactive)
-  (let ((titles (mapcar* #'cons
-                         (mapcar (lambda (l) (plist-get l 'title)) st-charts)
-                         (number-sequence 0 (length st-charts)))))
+  (let* ((count (hash-table-count st-charts))
+         (titles (let (titles)
+                   (reverse
+                    (dotimes (i count titles)
+                      (setq titles (cons (plist-get (gethash i st-charts) 'title) titles)))))))
     (setq title (completing-read "Chart Title: " titles))
     (setq idx (st--get-index-by-title title))
     (when (= idx -1)
       (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
     (st--by-index idx)))
 
-(defun st--by-index (index)
-  (setq chart (nth index st-charts))
+(defun st--by-index (idx)
+  (kill-local-variable 'chart)
+  (setq chart (gethash idx st-charts))
   (switch-to-buffer (st--generate-buffer-name (plist-get chart 'title)))
   (kill-all-local-variables)
   (make-local-variable 'index)
   (make-local-variable 'chart)
   (setq major-mode 'st-chart-mode mode-name "ST Charts")
   (use-local-map st-chart-mode-map)
-  (st--render-chart))
+  (st--insert-chart))
 
