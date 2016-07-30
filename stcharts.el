@@ -31,16 +31,20 @@ or -1 if no such chart is found"
 (defun st--insert-chart ()
   (insert "\nIdeal:\n")
   (setq ideal-start (point-marker))
+  (make-local-variable 'ideal-start)
   (insert (plist-get chart 'ideal))
   (setq ideal-end (point-marker))
+  (make-local-variable 'ideal-end)
 
   (insert "\n\n")
   (st--insert-children)
 
   (insert "\nReal:\n")
   (setq real-start (point-marker))
+  (make-local-variable 'real-start)
   (insert (plist-get chart 'real))
   (setq real-end (point-marker))
+  (make-local-variable 'real-end)
 
   (when (plist-get chart 'parents)
     (insert "\n\nRelated charts:\n")
