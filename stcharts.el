@@ -28,29 +28,32 @@ or -1 if no such chart is found"
          (complete (if (plist-get chart 'complete) "X" " ")))
     (concat "- " complete (plist-get chart 'title) "\n\n")))
 
-(defun st--chart-pp (idx)
-  (let ((chart (nth idx st-charts)))
-    (insert "\nIdeal:\n"
-            (plist-get chart 'ideal)
-            "\n\n"
-            (apply
-             'concat
-             (mapcar
-              (lambda (i) (st--child-chart-pp i))
-              (plist-get chart 'children)))
-            "Real:\n"
-            (plist-get chart 'real)
+(defun st--render-chart ()
+  (insert "\nIdeal:\n"
+          (plist-get chart 'ideal)
+          "\n\n"
+          (apply
+           'concat
+           (mapcar
+            (lambda (i) (st--child-chart-pp i))
+            (plist-get chart 'children)))
+          "Real:\n"
+          (plist-get chart 'real)
 
-            (when (plist-get chart 'parents)
-              "\n\nRelated charts:\n"
-              (substring
-               (apply
-                'concat
-                (mapcar
-                 (lambda (i)
-                   (concat (plist-get (nth i st-charts) 'title) ", "))
-                 (plist-get chart 'parents)))
-               0 -2)))))
+          (when (plist-get chart 'parents)
+            "\n\nRelated charts:\n"
+            (substring
+             (apply
+              'concat
+              (mapcar
+               (lambda (i)
+                 (concat (plist-get (nth i st-charts) 'title) ", "))
+               (plist-get chart 'parents)))
+             0 -2))))
+
+(defun st-insert-chart-at-point ())
+(defun st-remove-chart-at-point ())
+(defun st-move-child-at-point (pos))
 
 (defun st-add-parent (parent))
 (defun st-remove-parent (parent))
@@ -70,16 +73,12 @@ or -1 if no such chart is found"
     (st--by-index idx)))
 
 (defun st--by-index (index)
-  (let ((chart (nth index st-charts)))
-    (switch-to-buffer (st--generate-buffer-name (plist-get chart 'title)))
-    (kill-all-local-variables)
-    (setq major-mode 'st-chart-mode
-          mode-name "ST Charts")
-    (use-local-map st-chart-mode-map)
-    (st--display-ewoc chart)))
+  (setq chart (nth index st-charts))
+  (switch-to-buffer (st--generate-buffer-name (plist-get chart 'title)))
+  (kill-all-local-variables)
+  (make-local-variable 'index)
+  (make-local-variable 'chart)
+  (setq major-mode 'st-chart-mode mode-name "ST Charts")
+  (use-local-map st-chart-mode-map)
+  (st--render-chart))
 
-(defun st--display-ewoc (chart)
-  (let ((ewoc (ewoc-create 'st--chart-pp
-                           (format "ST Charts: %s" (plist-get chart 'title)))))
-    (ewoc-enter-last ewoc idx)
-    (ewoc-enter-last ewoc nil)))
