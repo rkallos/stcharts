@@ -43,7 +43,7 @@ or -1 if no such chart is found"
   (setq real-end (point-marker))
 
   (when (plist-get chart 'parents)
-    "\n\nRelated charts:\n"
+    (insert "\n\nRelated charts:\n")
     (st--insert-parents)))
 
 (defun st--insert-children ()
@@ -60,12 +60,17 @@ or -1 if no such chart is found"
      children)))
 
 (defun st--insert-parents ()
-  (let ((parents (mapcar (lambda (i) (gethash i st-charts))
+  (let ((parents (mapcar (lambda (i) (cons i (gethash i st-charts)))
                          (plist-get chart 'parents))))
     (mapcar
      (lambda (parent)
-       (insert (plist-get parent 'title) ", "))
-     parents)))
+       (setq parent-button-start (point))
+       (insert (plist-get (cdr parent) 'title))
+       (make-button parent-button-start (point)
+                    'action `(lambda (x) (st--by-index ,(car parent))))
+       (insert ", "))
+     parents)
+    (backward-delete-char 2)))
 
 (defun st-save-chart ()
   (puthash index chart st-charts))
