@@ -1,12 +1,22 @@
-(defcustom st-charts
-  "((title \"Root Chart\" ideal \"\" real \"\" due \"\" completed nil children '() parents '()))"
-  "This variable contains the combined graph of all your ST charts.
-This should only be edited via st-charts buffers, not manually"
+(defcustom st-charts-file
+  "~/.emacs.d/site-lisp/stcharts/charts.el"
+  "This variable contains the filename where your ST charts are stored."
   :type 'sexp)
 
 (setq st-chart-mode-map
       (let ((m (make-sparse-keymap)))
         (suppress-keymap m)))
+
+(defun st--load-charts-file ()
+  (setq buf (find-file-read-only st-charts-file))
+  (set-buffer buf)
+  (setq m (point-min-marker))
+  (setq st-charts (read m))
+  (kill-buffer buf))
+
+(defun st--save-charts-file ()
+  (with-temp-file st-charts-file
+    (print st-charts (current-buffer))))
 
 (defun st--generate-buffer-name (title)
   (format "*ST* %s" title))
