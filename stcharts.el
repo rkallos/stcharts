@@ -118,11 +118,12 @@ or -1 if no such chart is found"
 (defun st--by-index (idx)
   (kill-local-variable 'chart)
   (setq chart (gethash idx st-charts))
-  (switch-to-buffer (st--generate-buffer-name (plist-get chart 'title)))
+  (switch-to-buffer (get-buffer-create (st--generate-buffer-name (plist-get chart 'title))))
   (kill-all-local-variables)
   (make-local-variable 'index)
   (make-local-variable 'chart)
   (setq major-mode 'st-chart-mode mode-name "ST Charts")
   (use-local-map st-chart-mode-map)
+  (erase-buffer)
   (st--insert-chart))
 
