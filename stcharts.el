@@ -3,6 +3,9 @@
   "This variable contains the filename where your ST charts are stored."
   :type 'sexp)
 
+(defcustom st-charts-auto-save-interval 1.0
+  "The number of seconds to wait before saving ST charts to a file.")
+
 (setq st-chart-mode-map
       (let ((m (make-sparse-keymap)))
         (suppress-keymap m)))
