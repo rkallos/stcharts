@@ -21,6 +21,14 @@
   (with-temp-file st-charts-file
     (print st-charts (current-buffer))))
 
+(defun st--update-field (field start end)
+  (plist-put chart field (buffer-substring start end)))
+
+(defun st--save-chart ()
+  (st--update-field 'title title-start title-end)
+  (st--update-field 'ideal ideal-start ideal-end)
+  (st--update-field 'real real-start real-end))
+
 (defun st--generate-buffer-name (title)
   (format "*ST* %s" title))
 
@@ -42,20 +50,25 @@ or -1 if no such chart is found"
     (concat "- " complete (plist-get chart 'title) "\n\n")))
 
 (defun st--insert-chart ()
-  (insert "\nIdeal:\n")
+  (setq title-start (point-marker))
+  (make-local-variable 'title-start)
+  (insert (plist-get chart 'title) "\n")
+  (setq title-end (point-marker))
+  (make-local-variable 'title-end)
+
+  (insert "Ideal:\n")
   (setq ideal-start (point-marker))
   (make-local-variable 'ideal-start)
-  (insert (plist-get chart 'ideal))
+  (insert (plist-get chart 'ideal) "\n")
   (setq ideal-end (point-marker))
   (make-local-variable 'ideal-end)
 
-  (insert "\n\n")
   (st--insert-children)
 
   (insert "\nReal:\n")
   (setq real-start (point-marker))
   (make-local-variable 'real-start)
-  (insert (plist-get chart 'real))
+  (insert (plist-get chart 'real) "\n")
   (setq real-end (point-marker))
   (make-local-variable 'real-end)
 
@@ -115,9 +128,9 @@ or -1 if no such chart is found"
       (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
     (st--by-index idx)))
 
-(defun st--by-index (idx)
+(defun st--by-index (index)
   (kill-local-variable 'chart)
-  (setq chart (gethash idx st-charts))
+  (setq chart (gethash index st-charts))
   (switch-to-buffer (get-buffer-create (st--generate-buffer-name (plist-get chart 'title))))
   (kill-all-local-variables)
   (make-local-variable 'index)
@@ -127,3 +140,5 @@ or -1 if no such chart is found"
   (erase-buffer)
   (st--insert-chart))
 
+(defun st--delete-chart (idx)
+  (remhash idx st-charts))
