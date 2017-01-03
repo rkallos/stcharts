@@ -63,6 +63,7 @@ or -1 if no such chart is found"
   (setq ideal-end (point-marker))
   (make-local-variable 'ideal-end)
 
+  (insert "\n")
   (st--insert-children)
 
   (insert "\nReal:\n")
@@ -100,6 +101,7 @@ or -1 if no such chart is found"
                     'action `(lambda (x) (st--by-index ,(car parent))))
        (insert ", "))
      parents)
+    ;; Remove trailing comma
     (backward-delete-char 2)))
 
 (defun st-save-chart ()
