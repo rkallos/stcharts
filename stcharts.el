@@ -21,45 +21,65 @@
   (with-temp-file st-charts-file
     (print st-charts (current-buffer))))
 
-(defun st--update-field (field start end)
-  (plist-put chart field (buffer-substring start end)))
-
 (defun st--save-chart ()
-  (st--update-field 'title title-start title-end)
-  (st--update-field 'ideal ideal-start ideal-end)
-  (st--update-field 'real real-start real-end))
+  (st--put chart 'title (buffer-substring title-start title-end))
+  (st--put chart 'ideal (buffer-substring ideal-start ideal-end))
+  (st--put chart 'real  (buffer-substring real-start real-end)))
 
 (defun st--generate-buffer-name (title)
   (format "*ST* %s" title))
 
-(defun st--create-new-chart (title) 0)
+(defun st--create-new-chart (title)
+  (let ((idx (hash-table-count st-charts)))
+    (puthash idx (st--empty-chart) st-charts)
+    idx))
 
-(defun st--get-index-by-title (title &optional idx charts)
+(defun st--empty-chart ()
+  (list title ""
+        ideal "Ideal"
+        real "Real"
+        due ""
+        complete nil
+        children nil
+        parents nil))
+
+(defmacro st--get (idx-or-plist &optional field)
+  "Macro for structure-agnostic retrieving of a field from a chart"
+  (let ((chart (if (listp idx-or-plist) idx-or-plist `(gethash ,idx-or-plist st-charts))))
+    (if field
+        `(plist-get chart ,field)
+      chart)))
+
+(defmacro st--put (idx-or-plist field val)
+  "Macro for structure-agnostic setting of a field in a chart"
+  (let ((chart (if (listp idx-or-plist) idx-or-plist `(gethash ,idx-or-plist st-charts))))
+    `(plist-put ,chart ,field ,val)))
+
+(defun st--get-index-by-title (title)
   "Does a lookup of st-charts, returning the index of the matching chart,
 or -1 if no such chart is found"
-  (if idx
-      (cond
-       ((not charts) -1)
-       ((string= (plist-get (gethash idx charts) 'title) title) idx)
-       (t (st--get-index-by-title title (incf idx) st-charts)))
-    (st--get-index-by-title title 0 st-charts)))
+  (cl-do* ((idx 0 (+ 1 idx))
+           (current-title (st--get idx 'title) (st--get idx 'title)))
+      ((or (string= current-title title)
+           (null current-title))
+       (if (null current-title) -1 idx))))
 
 (defun st--child-chart-pp (idx)
-  (let ((chart (gethash idx st-charts))
-        (complete (if (plist-get chart 'complete) "X" " ")))
-    (concat "- " complete (plist-get chart 'title) "\n\n")))
+  (let ((chart (st--get idx))
+        (complete (if (st--get chart 'complete) "X" " ")))
+    (concat "- " complete (st--get chart 'title) "\n\n")))
 
 (defun st--insert-chart ()
   (setq title-start (point-marker))
   (make-local-variable 'title-start)
-  (insert (plist-get chart 'title) "\n")
+  (insert (st--get chart 'title) "\n")
   (setq title-end (point-marker))
   (make-local-variable 'title-end)
 
   (insert "Ideal:\n")
   (setq ideal-start (point-marker))
   (make-local-variable 'ideal-start)
-  (insert (plist-get chart 'ideal) "\n")
+  (insert (st--get chart 'ideal) "\n")
   (setq ideal-end (point-marker))
   (make-local-variable 'ideal-end)
 
@@ -69,22 +89,22 @@ or -1 if no such chart is found"
   (insert "\nReal:\n")
   (setq real-start (point-marker))
   (make-local-variable 'real-start)
-  (insert (plist-get chart 'real) "\n")
+  (insert (st--get chart 'real) "\n")
   (setq real-end (point-marker))
   (make-local-variable 'real-end)
 
-  (when (plist-get chart 'parents)
+  (when (st--get chart 'parents)
     (insert "\n\nRelated charts:\n")
     (st--insert-parents)))
 
 (defun st--insert-children ()
   (let ((children (mapcar (lambda (i) (cons i (gethash i st-charts)))
-                          (plist-get chart 'children))))
+                          (st--get chart 'children))))
     (mapcar
      (lambda (child)
-       (insert "- [" (if (plist-get (cdr child) 'complete) "X" " ") "] ")
+       (insert "- [" (if (st--get (cdr child) 'complete) "X" " ") "] ")
        (setq child-button-start (point))
-       (insert (plist-get (cdr child) 'title))
+       (insert (st--get (cdr child) 'title))
        (make-button child-button-start (point)
                     'action `(lambda (x) (st--by-index ,(car child))))
        (insert "\n"))
@@ -92,11 +112,11 @@ or -1 if no such chart is found"
 
 (defun st--insert-parents ()
   (let ((parents (mapcar (lambda (i) (cons i (gethash i st-charts)))
-                         (plist-get chart 'parents))))
+                         (st--get chart 'parents))))
     (mapcar
      (lambda (parent)
        (setq parent-button-start (point))
-       (insert (plist-get (cdr parent) 'title))
+       (insert (st--get (cdr parent) 'title))
        (make-button parent-button-start (point)
                     'action `(lambda (x) (st--by-index ,(car parent))))
        (insert ", "))
