@@ -129,7 +129,19 @@ or -1 if no such chart is found"
 (defun st-save-chart ()
   (puthash index chart st-charts))
 
-(defun st-insert-chart-at-point ())
+(defun st-insert-link-to-chart ()
+  "Choose a chart to link to in the current chart"
+  (interactive)
+  (setq idx -1)
+  (while (= idx -1)
+    (setq title (st--prompt-for-title "Insert Link: "))
+    (setq idx (st--get-index-by-title title))
+    (when (= idx -1)
+      (setq yes-create (yes-or-no-p (format "Insert new chart: \"%s\"?" title)))
+      (when yes-create
+        (setq idx (if (= )) (st--create-new-chart title)))))
+  ;; TODO: Add link to current buffer
+  )
 (defun st-remove-chart-at-point ())
 (defun st-move-child-at-point (pos))
 
@@ -141,21 +153,25 @@ or -1 if no such chart is found"
 (defun st ()
   "Choose a chart to open, or create a new chart."
   (interactive)
-  (let* ((count (hash-table-count st-charts))
-         (titles (let (titles)
-                   (reverse
-                    (dotimes (i count titles)
-                      (setq titles (cons (plist-get (gethash i st-charts) 'title) titles)))))))
-    (setq title (completing-read "Chart Title: " titles))
-    (setq idx (st--get-index-by-title title))
-    (when (= idx -1)
-      (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
-    (st--by-index idx)))
+  (setq title (st--prompt-for-title "Chart Title: "))
+  (setq idx (st--get-index-by-title title))
+  (when (= idx -1)
+    (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
+  (st--by-index idx))
+
+(defun st--prompt-for-title (prompt)
+  (setq titles ())
+  (maphash (lambda (key value)
+             (setq titles (cons (st--get value 'title) titles)))
+           st-charts)
+  (setq titles (nreverse titles))
+  (completing-read prompt titles))
 
 (defun st--by-index (index)
   (kill-local-variable 'chart)
   (setq chart (gethash index st-charts))
-  (switch-to-buffer (get-buffer-create (st--generate-buffer-name (plist-get chart 'title))))
+  (switch-to-buffer (get-buffer-create
+                     (st--generate-buffer-name (st--get chart 'title))))
   (kill-all-local-variables)
   (make-local-variable 'index)
   (make-local-variable 'chart)
