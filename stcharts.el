@@ -34,16 +34,17 @@
 (defun st--create-new-chart (title)
   (let ((idx (hash-table-count st-charts)))
     (puthash idx (st--empty-chart) st-charts)
+    (st--put idx 'title title)
     idx))
 
 (defun st--empty-chart ()
-  (list title ""
-        ideal "Ideal"
-        real "Real"
-        due ""
-        complete nil
-        children nil
-        parents nil))
+  '(title ""
+         ideal "Ideal text goes here"
+         real "Real text goes here"
+         due ""
+         complete nil
+         children nil
+         parents nil))
 
 (defun st--get (idx-or-plist &optional field)
   "Function for structure-agnostic retrieving of a field from a chart"
@@ -86,7 +87,8 @@ or -1 if no such chart is found"
   (make-local-variable 'ideal-end)
 
   (insert "\n")
-  (st--insert-children)
+  (unless (null (st--get chart 'children))
+    (st--insert-children))
 
   (insert "\nReal:\n")
   (setq real-start (point-marker))
@@ -125,9 +127,6 @@ or -1 if no such chart is found"
      parents)
     ;; Remove trailing comma
     (backward-delete-char 2)))
-
-(defun st-save-chart ()
-  (puthash index chart st-charts))
 
 (defun st-insert-link-to-chart ()
   "Choose a chart to link to in the current chart"
@@ -177,6 +176,8 @@ or -1 if no such chart is found"
 (defun st ()
   "Choose a chart to open, or create a new chart."
   (interactive)
+  (unless (boundp 'st-charts)
+      (st--load-charts-file))
   (setq title (st--prompt-for-title "Chart Title: "))
   (setq idx (st--get-index-by-title title))
   (when (= idx -1)
