@@ -45,17 +45,17 @@
         children nil
         parents nil))
 
-(defmacro st--get (idx-or-plist &optional field)
-  "Macro for structure-agnostic retrieving of a field from a chart"
-  (let ((chart (if (listp idx-or-plist) idx-or-plist `(gethash ,idx-or-plist st-charts))))
+(defun st--get (idx-or-plist &optional field)
+  "Function for structure-agnostic retrieving of a field from a chart"
+  (let ((chart (if (listp idx-or-plist) idx-or-plist (gethash idx-or-plist st-charts))))
     (if field
-        `(plist-get chart ,field)
+        (plist-get chart field)
       chart)))
 
-(defmacro st--put (idx-or-plist field val)
-  "Macro for structure-agnostic setting of a field in a chart"
-  (let ((chart (if (listp idx-or-plist) idx-or-plist `(gethash ,idx-or-plist st-charts))))
-    `(plist-put ,chart ,field ,val)))
+(defun st--put (idx-or-plist field val)
+  "Function for structure-agnostic setting of a field in a chart"
+  (let ((chart (if (listp idx-or-plist) idx-or-plist (gethash idx-or-plist st-charts))))
+    (plist-put chart field val)))
 
 (defun st--get-index-by-title (title)
   "Does a lookup of st-charts, returning the index of the matching chart,
@@ -100,7 +100,7 @@ or -1 if no such chart is found"
     (st--insert-parents)))
 
 (defun st--insert-children ()
-  (let ((children (mapcar (lambda (i) (cons i (gethash i st-charts)))
+  (let ((children (mapcar (lambda (i) (cons i (st--get i)))
                           (st--get chart 'children))))
     (mapcar
      (lambda (child)
@@ -113,7 +113,7 @@ or -1 if no such chart is found"
      children)))
 
 (defun st--insert-parents ()
-  (let ((parents (mapcar (lambda (i) (cons i (gethash i st-charts)))
+  (let ((parents (mapcar (lambda (i) (cons i (st--get i)))
                          (st--get chart 'parents))))
     (mapcar
      (lambda (parent)
@@ -150,15 +150,6 @@ or -1 if no such chart is found"
 (defun st-add-child (child))
 (defun st-remove-child (child))
 
-(defun st ()
-  "Choose a chart to open, or create a new chart."
-  (interactive)
-  (setq title (st--prompt-for-title "Chart Title: "))
-  (setq idx (st--get-index-by-title title))
-  (when (= idx -1)
-    (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
-  (st--by-index idx))
-
 (defun st--prompt-for-title (prompt)
   (setq titles ())
   (maphash (lambda (key value)
@@ -182,3 +173,12 @@ or -1 if no such chart is found"
 
 (defun st--delete-chart (idx)
   (remhash idx st-charts))
+
+(defun st ()
+  "Choose a chart to open, or create a new chart."
+  (interactive)
+  (setq title (st--prompt-for-title "Chart Title: "))
+  (setq idx (st--get-index-by-title title))
+  (when (= idx -1)
+    (setq idx (if (string= "" title) 0 (st--create-new-chart title))))
+  (st--by-index idx))
