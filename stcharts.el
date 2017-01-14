@@ -1,10 +1,12 @@
+;;; stcharts.el --- Emacs plugin for Robert Fritz style planning charts
+
+;; Copyright (C) 2016-2017 Richard Kallos
+
+(require 'cl-lib)
 (defcustom st-charts-file
   "~/.emacs.d/site-lisp/stcharts/charts.el"
   "This variable contains the filename where your ST charts are stored."
   :type 'sexp)
-
-(defcustom st-charts-auto-save-interval 1.0
-  "The number of seconds to wait before saving ST charts to a file.")
 
 (setq st-chart-mode-map
       (let ((m (make-sparse-keymap)))
