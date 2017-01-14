@@ -1,0 +1,34 @@
+* BNF grammar for stcharts.el rendering/parsing
+
+<chart>    ::= <title> "\n"
+               "Ideal:\n" <ideal> "\n"
+               <children> "\n"
+               "Real:\n" <real> "\n\n"
+               "Related charts:" "\n"
+               <parents>
+
+<title>    ::= <line>
+<ideal>    ::= <lines>
+<children> ::= <child> | <child> <children>
+<real>     ::= <lines>
+<parents>  ::= <parent> | <parent> ", " <parents>
+
+<line>     ::= ^.*$
+<lines>    ::= <line> "\n" <lines> | ""
+<child>    ::= "- " <box> " " <title> "\n"
+<box>      ::= "[ ]" | "[X]"
+
+* Description of parser algorithm
+Input: An Emacs buffer
+Output: A plist with fields populated according to the buffer's contents
+
+** What are the "borders"?
+1. Title -> Ideal: "\nIdeal:\n"
+2. Ideal -> Children: "\n\n"
+3. Children -> Real: "\nReal:"
+4. Real -> Parents: "\n\nRelated charts:"
+
+** Dumb parser
+- Create list containing above borders
+- Set mark, Isearch buffer for next border
+- (buffer-substring (mark) (point))
